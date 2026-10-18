@@ -14,10 +14,10 @@ int main(int argc, char *argv[])
     unsigned char buffer[MAX_DATA_SIZE];
     char filename[MAX_FILENAME_SIZE + 2];
     size_t length;
-    uint16_t count, sequence_number, expected_sequence = 0;
-    unsigned int packet_count = 0;
-    unsigned long total_bytes = 0;
-    FILE *output_file;
+    uint16_t count, sequenceNumber, expectedSequence = 0;
+    unsigned int packetCount = 0;
+    unsigned long totalBytes = 0;
+    FILE *outputFile;
 
     // check if valid number of command arguments passed
     if (argc > 3)
@@ -68,8 +68,8 @@ int main(int argc, char *argv[])
         DieWithError("send filename");
 
     // opens output file in binary mode to check if written bytes match received bytes
-    output_file = fopen("out.txt", "wb");
-    if (output_file == NULL)
+    outputFile = fopen("out.txt", "wb");
+    if (outputFile == NULL)
         DieWithError("fopen");
 
     // Receive packets until the EOT packet arrives.
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
         if (result == 0)
         {
             fprintf(stderr, "Connection closed before EOT packet.\n");
-            fclose(output_file);
+            fclose(outputFile);
             close(sock);
             return EXIT_FAILURE;
         }
@@ -89,30 +89,30 @@ int main(int argc, char *argv[])
             DieWithError("recv header");
 
         // converts count and sequence num from network byte order
-        DecodeHeader(header, &count, &sequence_number);
+        DecodeHeader(header, &count, &sequenceNumber);
 
         if (count == 0)
         {
-            if (sequence_number != (uint16_t)(expected_sequence + 1))
+            if (sequenceNumber != (uint16_t)(expectedSequence + 1))
             {
                 fprintf(stderr, "Invalid EOT sequence number.\n");
-                fclose(output_file);
+                fclose(outputFile);
                 close(sock);
                 return EXIT_FAILURE;
             }
 
             printf("End of Transmission Packet with sequence number %u "
                    "received with 0 data bytes\n",
-                   (unsigned int)sequence_number);
+                   (unsigned int)sequenceNumber);
             break;
         }
 
         // check for error in count size or sequence number order
         if (count > MAX_DATA_SIZE ||
-            sequence_number != (uint16_t)(expected_sequence + 1))
+            sequenceNumber != (uint16_t)(expectedSequence + 1))
         {
             fprintf(stderr, "Invalid data packet.\n");
-            fclose(output_file);
+            fclose(outputFile);
             close(sock);
             return EXIT_FAILURE;
         }
@@ -122,34 +122,34 @@ int main(int argc, char *argv[])
         if (result != 1)
         {
             fprintf(stderr, "Connection closed before full packet data.\n");
-            fclose(output_file);
+            fclose(outputFile);
             close(sock);
             return EXIT_FAILURE;
         }
 
         // Write bytes to preserve original file exactly. 
-        if (fwrite(buffer, 1, count, output_file) != count)
+        if (fwrite(buffer, 1, count, outputFile) != count)
             DieWithError("fwrite");
 
         printf("Packet %u received with %u data bytes\n",
-               (unsigned int)sequence_number,
+               (unsigned int)sequenceNumber,
                (unsigned int)count);
 
         // sets counts for final summary
-        expected_sequence = sequence_number;
-        packet_count++;
-        total_bytes += count;
+        expectedSequence = sequenceNumber;
+        packetCount++;
+        totalBytes += count;
     }
 
     // 4. CLOSE CONNECTION
 
     // closes output file, DieWithError if error
-    if (fclose(output_file) != 0)
+    if (fclose(outputFile) != 0)
         DieWithError("fclose");
 
     // print summary
-    printf("Number of data packets received: %u\n", packet_count);
-    printf("Total number of data bytes received: %lu\n", total_bytes);
+    printf("Number of data packets received: %u\n", packetCount);
+    printf("Total number of data bytes received: %lu\n", totalBytes);
 
     close(sock);
     return EXIT_SUCCESS;

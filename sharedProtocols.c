@@ -2,18 +2,11 @@
     Helper functions shared by the client and server: error handling, address setup, 
     send/receive, and packet header encoding. 
 */
-#ifndef SHARED_PROTOCOL_H
-#define SHARED_PROTOCOL_H
+#include "sharedProtocols.h"
+#include "signal.h"
 
 #include <stdint.h>
 #include <stddef.h>
-
-#define SERVER_PORT 5000
-#define SERVER_IP "127.0.0.1"
-
-#define MAX_DATA_SIZE 80
-#define MAX_FILENAME_SIZE 80
-#define HEADER_SIZE 4
 
 void DieWithError(const char *message)
 {
@@ -51,7 +44,7 @@ void SetAddress(struct sockaddr_in *address, const char *ip, unsigned short port
 }
 
 // Send all requested bytes, even if send() sends only part of them.
-int Send_all(int socket, const void *buffer, size_t length)
+int SendAll(int socket, const void *buffer, size_t length)
 {
     const char *ptr = buffer;
     size_t sent = 0;
@@ -70,7 +63,7 @@ int Send_all(int socket, const void *buffer, size_t length)
 /* Receive exactly the requested bytes.
    Returns 1 on success, 0 if the connection closes before any bytes,
    and -1 on an error or an incomplete message. */
-int Recv_exact(int socket, void *buffer, size_t length)
+int RecvExact(int socket, void *buffer, size_t length)
 {
     char *ptr = buffer;
     size_t received = 0;
@@ -88,31 +81,33 @@ int Recv_exact(int socket, void *buffer, size_t length)
     return 1;
 }
 
+// Encodes count and sequence number into network byte order header.
 void EncodeHeader(unsigned char *header,
                   uint16_t count,
-                  uint16_t sequence_number)
+                  uint16_t sequenceNumber)
 {
-    uint16_t network_count = htons(count);
-    uint16_t network_sequence = htons(sequence_number);
+    uint16_t networkCount = htons(count);
+    uint16_t networkSequence = htons(sequenceNumber);
 
-    memcpy(header, &network_count, sizeof(network_count));
-    memcpy(header + sizeof(network_count),
-           &network_sequence,
-           sizeof(network_sequence));
+    memcpy(header, &networkCount, sizeof(networkCount));
+    memcpy(header + sizeof(networkCount),
+           &networkSequence,
+           sizeof(networkSequence));
 }
 
+// Decodes count and sequence number from network byte order header.
 void DecodeHeader(const unsigned char *header,
                   uint16_t *count,
-                  uint16_t *sequence_number)
+                  uint16_t *sequenceNumber)
 {
-    uint16_t network_count;
-    uint16_t network_sequence;
+    uint16_t networkCount;
+    uint16_t networkSequence;
 
-    memcpy(&network_count, header, sizeof(network_count));
-    memcpy(&network_sequence,
-           header + sizeof(network_count),
-           sizeof(network_sequence));
+    memcpy(&networkCount, header, sizeof(networkCount));
+    memcpy(&networkSequence,
+           header + sizeof(networkCount),
+           sizeof(networkSequence));
 
-    *count = ntohs(network_count);
-    *sequence_number = ntohs(network_sequence);
+    *count = ntohs(networkCount);
+    *sequenceNumber = ntohs(networkSequence);
 }

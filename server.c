@@ -3,8 +3,9 @@
 #include "sharedProtocols.h"
 #include "signal.h"
 #define RCVBUFSIZE 80
+#define MAXPENDING 5
 
-void HandleTCPClient(int client)
+void HandleTcpClient(int client)
 {
     uint16_t header[2];
     uint16_t count, sequence;
@@ -16,7 +17,7 @@ void HandleTCPClient(int client)
     int result;
 
     /* receive header of file name*/
-    result = Recv_exact(client, header, sizeof(header));
+    result = RecvExact(client, header, sizeof(header));
     if (result != 1) {
         fprintf(stderr, "Error receiving filename header.\n");
         close(client);
@@ -34,7 +35,7 @@ void HandleTCPClient(int client)
     }
 
     // receive the filename 
-    result = Recv_exact(client, filename, count);
+    result = RecvExact(client, filename, count);
     if (result != 1) {
         fprintf(stderr, "Error receiving filename\n");
         close(client);
@@ -57,17 +58,17 @@ void HandleTCPClient(int client)
     /* Read file and transmit, new packet at \n */
     for (;;) {
         size_t bytes = 0;
-        int currCh;
+        int currentChar;
 
         while (bytes < sizeof(buffer)) {
-            currCh = fgetc(data);
+            currentChar = fgetc(data);
 
-            if (currCh == EOF)
+            if (currentChar == EOF)
                 break;
 
-            buffer[bytes++] = (char)currCh;
+            buffer[bytes++] = (char)currentChar;
 
-            if (currCh == '\n')
+            if (currentChar == '\n')
                 break;
         }
 
@@ -92,8 +93,8 @@ void HandleTCPClient(int client)
         header[0] = htons((uint16_t)bytes);
         header[1] = htons(sequence);
 
-        if (Send_all(client, header, sizeof(header)) < 0 ||
-            Send_all(client, buffer, bytes) < 0) {
+        if (SendAll(client, header, sizeof(header)) < 0 ||
+            SendAll(client, buffer, bytes) < 0) {
           fprintf(stderr, "Error sending file data\n");
             fclose(data);
             close(client);
@@ -114,7 +115,7 @@ void HandleTCPClient(int client)
     header[0] = htons(0);
     header[1] = htons(sequence);
 
-    if (Send_all(client, header, sizeof(header)) < 0) {
+    if (SendAll(client, header, sizeof(header)) < 0) {
         fprintf(stderr, "Error sending EOT packet\n");
         close(client);
         return;
@@ -128,8 +129,6 @@ void HandleTCPClient(int client)
 
     close(client);
 }
-
-
 
 
 int main(int argc, char *argv[]){
@@ -165,9 +164,7 @@ int main(int argc, char *argv[]){
         // if (client < 0 && errno == EINTR) continue;
         if (client < 0) DieWithError("accept");
         printf("Handling client %s\n", inet_ntoa(peer.sin_addr));
-        HandleTCPClient(client); /* Deliberately serve one connection at a time. */
+        HandleTcpClient(client); /* Deliberately serve one connection at a time. */
         close(server);
         return EXIT_SUCCESS;
 }
-
-

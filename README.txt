@@ -49,7 +49,7 @@
 
         ./client 127.0.0.1 5000
 
-    Enter the filename to request. The server reads that file,
+    Enter the filename to request (with .txt included). The server reads that file,
     divides it into packets of up to 80 data bytes, and sends the packets to
     the client. The client saves the received contents as `out.txt`.
 
